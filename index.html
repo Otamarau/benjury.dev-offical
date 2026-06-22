@@ -8,6 +8,7 @@
         <title>benjury.dev</title>
         <script src="scripts/canvas.js" defer></script>
         <script src="scripts/terminal.js" defer></script>
+        <script src="scripts/fishpage.js" defer></script>
     </head>
     <body>
         <nav>
@@ -15,7 +16,7 @@
                 <h1>benjury.dev</h1>
                 <div id="i-con">
                     <i class="ico fa-solid fa-record-vinyl"></i>
-                    <i class="ico fa-solid fa-fish"></i>
+                    <i class="ico fa-solid fa-fish" onclick="loadfishpage()"></i>
                     <i class="ico fa-solid fa-message"></i>
                     <i class="ico fa-brands fa-square-github"></i>
                     <i class="ico fa-solid fa-circle-user"></i>
@@ -23,40 +24,42 @@
             </div>
         </nav>
         <br>
+
         <div id="main-con">
             <canvas id="ascii-name" aria-label="A spinning 3D rendering of benjury.dev made from hash characters">
                 benjury.dev
             </canvas>
-        </div>
-        <br>
-       <div id="aboutme-con">
-            <!-- <h2>aboutme.txt</h2> -->
-
-            <div class="runner-con">
-                <div class="runner">
-                    <h2>aboutme.js</h2>
-                </div>
-            </div>
-
+        
             <br>
+            <div id="aboutme-con">
+                <!-- <h2>aboutme.txt</h2> -->
 
-            <div id="command-container">
-
-                <div class="command">
-                    <span class="prompt">ben@benjury.dev#</span>
-                    <span class="command-entry">
-                        <span id="welcome-text" class="command-text"></span>
-                    </span>
-                </div>
-                <!-- <br> -->
-                <div id="user-command" class="command" tabindex="0">
-                    <span class="prompt">you@benjury.dev#</span>
-                    <span class="command-entry">
-                        <span id="terminal-input" class="command-text"></span>
-                        <span class="terminal-cursor" aria-hidden="true"></span>
-                    </span>
+                <div class="runner-con">
+                    <div class="runner">
+                        <h2>aboutme.js</h2>
+                    </div>
                 </div>
 
+                <br>
+
+                <div id="command-container">
+
+                    <div class="command">
+                        <span class="prompt">ben@benjury.dev#</span>
+                        <span class="command-entry">
+                            <span id="welcome-text" class="command-text"></span>
+                        </span>
+                    </div>
+                    <!-- <br> -->
+                    <div id="user-command" class="command" tabindex="0">
+                        <span class="prompt">you@benjury.dev#</span>
+                        <span class="command-entry">
+                            <span id="terminal-input" class="command-text"></span>
+                            <span class="terminal-cursor" aria-hidden="true"></span>
+                        </span>
+                    </div>
+
+                </div>
             </div>
        </div>
     </body>

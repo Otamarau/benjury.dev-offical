@@ -19,6 +19,10 @@ const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").match
 const wobblePitch = 0.035;
 const wobbleYaw = 0.02;
 const wobbleRoll = 0.045;
+const introDuration = 2200;
+const introScatterWidth = 1200;
+const introScatterHeight = 520;
+const introScatterDepth = 1100;
 
 let width = 0;
 let height = 0;
@@ -36,6 +40,11 @@ let isDragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
 let lastPointerTime = performance.now();
+let introStartTime = 0;
+
+const easeOutCubic = (value) => {
+    return 1 - Math.pow(1 - value, 3);
+};
 
 const buildCharacterSprites = () => {
     const colors = ["#277a27", "#3e9f3e", "#58c758", "#78e878", "#a2f5a2"];
@@ -126,11 +135,30 @@ const buildNamePoints = () => {
             const depthJitter = seed - Math.floor(seed);
             const depthPosition = (layer + depthJitter) / depthLayers;
             const characterIndex = Math.floor(depthJitter * CHARACTERS.length);
+            const targetX = surfacePoint.x - centerX;
+            const targetY = surfacePoint.y - centerY;
+            const targetZ = (depthPosition - 0.5) * depth;
+            const scatterAngle = depthJitter * Math.PI * 2;
+            const scatterSeed = Math.sin(
+                surfacePoint.x * 93.9898
+                + surfacePoint.y * 67.345
+                + layer * 21.129
+            ) * 18421.7273;
+            const scatterNoise = scatterSeed - Math.floor(scatterSeed);
+            const scatterXSeed = Math.sin(seed * 0.017 + surfacePoint.y * 1.371) * 8743.123;
+            const scatterYSeed = Math.sin(seed * 0.023 + surfacePoint.x * 1.917) * 6591.784;
+            const scatterZSeed = Math.sin(seed * 0.031 + layer * 4.731) * 2931.417;
+            const scatterRadius = 360 + scatterNoise * 440;
 
             points.push({
-                x: surfacePoint.x - centerX,
-                y: surfacePoint.y - centerY,
-                z: (depthPosition - 0.5) * depth,
+                x: targetX,
+                y: targetY,
+                z: targetZ,
+                startX: Math.cos(scatterAngle) * scatterRadius
+                    + ((scatterXSeed - Math.floor(scatterXSeed)) - 0.5) * introScatterWidth,
+                startY: Math.sin(scatterAngle) * scatterRadius
+                    + ((scatterYSeed - Math.floor(scatterYSeed)) - 0.5) * introScatterHeight,
+                startZ: ((scatterZSeed - Math.floor(scatterZSeed)) - 0.5) * introScatterDepth,
                 characterIndex,
             });
         }
@@ -193,6 +221,8 @@ const draw = (time) => {
     const sinZ = Math.sin(displayAngleZ);
     const centerX = width / 2;
     const centerY = height / 2;
+    const introElapsed = reduceMotion ? introDuration : time - introStartTime;
+    const introProgress = easeOutCubic(Math.min(Math.max(introElapsed / introDuration, 0), 1));
 
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     context.clearRect(0, 0, width, height);
@@ -200,10 +230,13 @@ const draw = (time) => {
     context.fillRect(0, 0, width, height);
 
     for (const point of points) {
-        const rolledX = point.x * cosZ - point.y * sinZ;
-        const rolledY = point.x * sinZ + point.y * cosZ;
-        const rotatedX = rolledX * cosY - point.z * sinY;
-        const rotatedZ = rolledX * sinY + point.z * cosY;
+        const pointX = point.startX + (point.x - point.startX) * introProgress;
+        const pointY = point.startY + (point.y - point.startY) * introProgress;
+        const pointZ = point.startZ + (point.z - point.startZ) * introProgress;
+        const rolledX = pointX * cosZ - pointY * sinZ;
+        const rolledY = pointX * sinZ + pointY * cosZ;
+        const rotatedX = rolledX * cosY - pointZ * sinY;
+        const rotatedZ = rolledX * sinY + pointZ * cosY;
         const rotatedY = rolledY * cosX - rotatedZ * sinX;
         const finalZ = rolledY * sinX + rotatedZ * cosX;
         const perspective = cameraDistance / (cameraDistance + finalZ);
@@ -233,6 +266,7 @@ const startAnimation = () => {
     resizeCanvas();
     previousTime = performance.now();
     lastDrawTime = 0;
+    introStartTime = previousTime;
     animationFrame = requestAnimationFrame(draw);
 };
 
