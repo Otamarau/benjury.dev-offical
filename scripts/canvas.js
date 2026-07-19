@@ -1,5 +1,5 @@
-const canvas = document.getElementById("ascii-name");
-const context = canvas.getContext("2d");
+let canvas = null;
+let context = null;
 const sampleCanvas = document.createElement("canvas");
 const sampleContext = sampleCanvas.getContext("2d", {
     willReadFrequently: true,
@@ -166,6 +166,10 @@ const buildNamePoints = () => {
 };
 
 const resizeCanvas = () => {
+    if (!canvas) {
+        return;
+    }
+
     const bounds = canvas.getBoundingClientRect();
     pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
     width = bounds.width;
@@ -175,6 +179,10 @@ const resizeCanvas = () => {
 };
 
 const draw = (time) => {
+    if (!canvas || !context) {
+        return;
+    }
+
     animationFrame = requestAnimationFrame(draw);
 
     if (time - lastDrawTime < frameInterval) {
@@ -266,6 +274,11 @@ const startAnimation = () => {
     resizeCanvas();
     previousTime = performance.now();
     lastDrawTime = 0;
+    angleX = 0;
+    angleY = 0;
+    velocityX = 0;
+    velocityY = 0;
+    isDragging = false;
     introStartTime = previousTime;
     animationFrame = requestAnimationFrame(draw);
 };
@@ -277,7 +290,7 @@ const startDragging = (event) => {
     lastPointerTime = performance.now();
     velocityX = 0;
     velocityY = 0;
-    canvas.setPointerCapture(event.pointerId);
+    canvas?.setPointerCapture(event.pointerId);
 };
 
 const dragName = (event) => {
@@ -312,15 +325,36 @@ const stopDragging = (event) => {
 
     isDragging = false;
 
-    if (canvas.hasPointerCapture(event.pointerId)) {
+    if (canvas?.hasPointerCapture(event.pointerId)) {
         canvas.releasePointerCapture(event.pointerId);
     }
 };
 
-window.addEventListener("resize", resizeCanvas);
-canvas.addEventListener("pointerdown", startDragging);
-canvas.addEventListener("pointermove", dragName);
-canvas.addEventListener("pointerup", stopDragging);
-canvas.addEventListener("pointercancel", stopDragging);
+const setupCanvas = () => {
+    canvas = document.getElementById("ascii-name");
 
-startAnimation();
+    if (!canvas) {
+        return null;
+    }
+
+    context = canvas.getContext("2d");
+
+    window.addEventListener("resize", resizeCanvas);
+    canvas.addEventListener("pointerdown", startDragging);
+    canvas.addEventListener("pointermove", dragName);
+    canvas.addEventListener("pointerup", stopDragging);
+    canvas.addEventListener("pointercancel", stopDragging);
+
+    startAnimation();
+
+    return () => {
+        cancelAnimationFrame(animationFrame);
+        window.removeEventListener("resize", resizeCanvas);
+        canvas?.removeEventListener("pointerdown", startDragging);
+        canvas?.removeEventListener("pointermove", dragName);
+        canvas?.removeEventListener("pointerup", stopDragging);
+        canvas?.removeEventListener("pointercancel", stopDragging);
+        canvas = null;
+        context = null;
+    };
+};
