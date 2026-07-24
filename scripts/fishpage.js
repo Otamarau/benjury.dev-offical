@@ -144,6 +144,12 @@ const setupFishPage = () => {
     const bobHeight = 12;
     const waterSurfacePosition = 0.15;
     const bubbleCharacters = [".", "0", "o"];
+    const footballs = [];
+    let footballCharacter = "o";
+    const footballFontSize = 40;
+    const footballColor = "gold";
+    const creatureStates = {};
+    const hungerCooldown = 15 * 60 * 1000;
     const bubbles = Array.from({ length: 18 }, () => ({
         character: bubbleCharacters[Math.floor(Math.random() * bubbleCharacters.length)],
         horizontalPosition: 0.05 + Math.random() * 0.9,
@@ -167,6 +173,25 @@ const setupFishPage = () => {
     let canvasWidth = 0;
     let canvasHeight = 0;
     let pixelRatio = 1;
+    let lastFrameTime = 0;
+    let frameElapsed = 0;
+
+    fetch("ascii-fish/foodball.txt")
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`Could not load foodball.txt (${response.status})`);
+            }
+
+            return response.text();
+        })
+        .then((text) => {
+            const loadedCharacter = text.trim();
+
+            if (loadedCharacter) {
+                footballCharacter = loadedCharacter;
+            }
+        })
+        .catch((error) => console.warn(error));
 
     const resizeCanvas = () => {
         const bounds = canvas.getBoundingClientRect();
@@ -188,6 +213,7 @@ const setupFishPage = () => {
     };
 
     const drawCreature = ({
+        id,
         artwork,
         time,
         duration,
@@ -197,14 +223,22 @@ const setupFishPage = () => {
         sizeScale = 1,
         phaseOffset = 0,
         flipAtEdges = true,
+        seeksFood = false,
     }) => {
+        const creatureState = creatureStates[id] ?? {
+            x: null,
+            y: null,
+            growth: 0,
+            lastAteAt: 0,
+        };
+        creatureStates[id] = creatureState;
         const longestLineLength = Math.max(...artwork.map((line) => line.length));
         const fontSizeFromWidth = canvasWidth / (longestLineLength * 0.68);
         const fontSizeFromHeight = canvasHeight / (artwork.length * 1.25);
         const fontSize = Math.max(
             9,
             Math.min(fontSizeFromWidth, fontSizeFromHeight) * 0.105
-        ) * sizeScale;
+        ) * sizeScale * (1 + creatureState.growth);
         const lineHeight = fontSize * 1.25;
         const blockHeight = artwork.length * lineHeight;
 
@@ -244,8 +278,62 @@ const setupFishPage = () => {
             scaleX = Math.cos(turnProgress * Math.PI);
         }
 
-        const centerY = canvasHeight * verticalPosition
+        const normalY = canvasHeight * verticalPosition
             + (reduceMotion ? 0 : Math.sin(time * bobSpeed + phaseOffset) * bobHeight);
+        const isHungry = Date.now() - creatureState.lastAteAt >= hungerCooldown;
+        const availableFood = seeksFood
+            ? footballs.find(
+                (football) => football.y >= canvasHeight * waterSurfacePosition
+                    && (
+                        football.eatenBy === id
+                        || (!football.eatenBy && isHungry)
+                    )
+            )
+            : null;
+
+        if (creatureState.x === null || creatureState.y === null) {
+            creatureState.x = x;
+            creatureState.y = normalY;
+        }
+
+        if (availableFood && !reduceMotion) {
+            scaleX = availableFood.x < creatureState.x ? 1 : -1;
+            const mouthOffset = scaleX * creatureWidth / 2;
+            const targetX = availableFood.x + mouthOffset;
+            const approachAmount = Math.min(1, frameElapsed * 0.002);
+
+            creatureState.x += (targetX - creatureState.x) * approachAmount;
+            creatureState.y += (availableFood.y - creatureState.y) * approachAmount;
+
+            const mouthX = creatureState.x - mouthOffset;
+            const mouthDistance = Math.hypot(
+                mouthX - availableFood.x,
+                creatureState.y - availableFood.y
+            );
+
+            if (mouthDistance < 14) {
+                if (!availableFood.eatenBy) {
+                    creatureState.lastAteAt = Date.now();
+                }
+
+                availableFood.eatenBy = id;
+                availableFood.scale = Math.max(
+                    0.08,
+                    availableFood.scale - frameElapsed * 0.0008
+                );
+                creatureState.growth = Math.min(
+                    0.14,
+                    creatureState.growth + frameElapsed * 0.00012
+                );
+            }
+        } else {
+            const returnAmount = reduceMotion ? 1 : Math.min(1, frameElapsed * 0.001);
+            creatureState.x += (x - creatureState.x) * returnAmount;
+            creatureState.y += (normalY - creatureState.y) * returnAmount;
+        }
+
+        x = creatureState.x;
+        const centerY = creatureState.y;
         const startY = -blockHeight / 2 + fontSize;
 
         context.save();
@@ -307,6 +395,49 @@ const setupFishPage = () => {
         context.restore();
     };
 
+    const drawFootballs = (time) => {
+        const waterY = canvasHeight * waterSurfacePosition;
+
+        context.save();
+        context.font = `${footballFontSize}px Consolas, "Courier New", monospace`;
+        context.fillStyle = footballColor;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+
+        for (let index = footballs.length - 1; index >= 0; index -= 1) {
+            const football = footballs[index];
+
+            if (!reduceMotion && !football.eatenBy) {
+                if (football.y < waterY) {
+                    football.velocity = Math.min(
+                        football.velocity + frameElapsed * 0.001,
+                        0.55
+                    );
+                    football.y += football.velocity * frameElapsed;
+                } else {
+                    football.y += frameElapsed * 0.025;
+                    football.x += Math.sin(time * 0.0015 + football.phase)
+                        * frameElapsed * 0.015;
+                }
+            }
+
+            context.save();
+            context.translate(football.x, football.y);
+            context.scale(football.scale, football.scale);
+            context.fillText(footballCharacter, 0, 0);
+            context.restore();
+
+            if (
+                football.scale <= 0.08
+                || football.y - footballFontSize / 2 > canvasHeight
+            ) {
+                footballs.splice(index, 1);
+            }
+        }
+
+        context.restore();
+    };
+
     const drawKelp = (time) => {
         const fontSize = 16;
         const segmentSpacing = fontSize * 0.85;
@@ -342,14 +473,17 @@ const setupFishPage = () => {
 
     const drawFish = (time = 0) => {
         resizeCanvas();
+        frameElapsed = Math.min(Math.max(time - lastFrameTime, 0), 40);
 
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         context.clearRect(0, 0, canvasWidth, canvasHeight);
         context.fillStyle = "#000";
         context.fillRect(0, 0, canvasWidth, canvasHeight);
         drawKelp(time);
+        drawFootballs(time);
 
         drawCreature({
+            id: "fishOne",
             artwork: fish,
             time,
             duration: fishSwimDurations.fishOne,
@@ -357,8 +491,10 @@ const setupFishPage = () => {
             bobSpeed: 0.003,
             colorMap: fishOneCharacterColors,
             sizeScale: 1.3,
+            seeksFood: true,
         });
         drawCreature({
+            id: "fishTwo",
             artwork: fishTwo,
             time,
             duration: fishSwimDurations.fishTwo,
@@ -370,6 +506,7 @@ const setupFishPage = () => {
             flipAtEdges: false,
         });
         drawCreature({
+            id: "fishThree",
             artwork: fishThree,
             time,
             duration: fishSwimDurations.fishThree,
@@ -377,8 +514,10 @@ const setupFishPage = () => {
             bobSpeed: 0.0026,
             colorMap: fishThreeCharacterColors,
             phaseOffset: 11000,
+            seeksFood: true,
         });
         drawCreature({
+            id: "fishFour",
             artwork: fishFour,
             time,
             duration: fishSwimDurations.fishFour,
@@ -387,9 +526,11 @@ const setupFishPage = () => {
             colorMap: fishFourCharacterColors,
             sizeScale: 0.9,
             phaseOffset: 15000,
+            seeksFood: true,
         });
         drawBubbles(time);
         drawWaterSurface();
+        lastFrameTime = time;
 
         if (!reduceMotion) {
             animationFrame = requestAnimationFrame(drawFish);
@@ -405,11 +546,36 @@ const setupFishPage = () => {
         }
     };
 
+    const dropFootball = (event) => {
+        const bounds = canvas.getBoundingClientRect();
+        const x = event.clientX - bounds.left;
+        const y = event.clientY - bounds.top;
+
+        if (y >= bounds.height * waterSurfacePosition) {
+            return;
+        }
+
+        footballs.push({
+            x,
+            y,
+            velocity: 0,
+            phase: Math.random() * Math.PI * 2,
+            scale: 1,
+            eatenBy: null,
+        });
+
+        if (reduceMotion) {
+            drawFish();
+        }
+    };
+
     window.addEventListener("resize", queueDrawFish);
+    canvas.addEventListener("click", dropFootball);
     animationFrame = requestAnimationFrame(drawFish);
 
     return () => {
         cancelAnimationFrame(animationFrame);
         window.removeEventListener("resize", queueDrawFish);
+        canvas.removeEventListener("click", dropFootball);
     };
 };

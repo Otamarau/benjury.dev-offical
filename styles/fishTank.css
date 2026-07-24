@@ -6,7 +6,8 @@
     color: #ccc;
     box-sizing: border-box;
     overflow: hidden;
-    border: 1px solid rgb(144 238 144 / 20%);
+    /* border: 1px solid rgb(144 238 144 / 20%); */
+    border: 2px dashed green;
     border-bottom: 4px solid lightgreen;
     box-shadow: var(--canvas-shadow);
 }
