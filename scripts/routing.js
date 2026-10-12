@@ -1,8 +1,11 @@
 const renderHomePage = () => {
     return `
-        <canvas id="ascii-name" aria-label="A spinning 3D rendering of benjury.dev made from hash characters">
-            benjury.dev
-        </canvas>
+        <div id="home-hero">
+            <canvas id="ascii-name" aria-label="A spinning 3D rendering of benjury.dev made from hash characters">
+                benjury.dev
+            </canvas>
+        </div>
+        ${aboutMe()}
     `;
 };
 
@@ -51,6 +54,7 @@ const routes = {
         setup: setupTerminal,
     },
     fish: {
+        label: "Fish_Tank",
         render: renderFishPage,
         setup: setupFishPage,
     },
@@ -69,6 +73,7 @@ const navigateTo = (routeName, shouldUpdateHash = true) => {
     }
 
     mainCon.innerHTML = route.render();
+    document.getElementById("page-label").textContent = route.label ?? "Welcome";
     currentCleanup = route.setup?.() ?? null;
 
     if (shouldUpdateHash && window.location.hash !== `#${normalizedRouteName}`) {

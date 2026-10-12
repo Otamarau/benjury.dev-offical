@@ -223,6 +223,8 @@ const setupFishPage = () => {
         sizeScale = 1,
         phaseOffset = 0,
         flipAtEdges = true,
+        edgeInset = 0,
+        followPathExactly = true,
         seeksFood = false,
     }) => {
         const creatureState = creatureStates[id] ?? {
@@ -243,10 +245,31 @@ const setupFishPage = () => {
         const blockHeight = artwork.length * lineHeight;
 
         context.font = `${fontSize}px Consolas, "Courier New", monospace`;
-        const creatureWidth = Math.max(
-            ...artwork.map((line) => context.measureText(line).width)
+        const visibleBounds = artwork.reduce(
+            (bounds, line) => {
+                const firstVisibleIndex = line.search(/\S/);
+
+                if (firstVisibleIndex === -1) {
+                    return bounds;
+                }
+
+                const lastVisibleIndex = line.search(/\s*$/);
+                return {
+                    left: Math.min(
+                        bounds.left,
+                        context.measureText(line.slice(0, firstVisibleIndex)).width
+                    ),
+                    right: Math.max(
+                        bounds.right,
+                        context.measureText(line.slice(0, lastVisibleIndex)).width
+                    ),
+                };
+            },
+            { left: Infinity, right: -Infinity }
         );
-        const edgePadding = creatureWidth / 2 + 16;
+        const creatureWidth = visibleBounds.right - visibleBounds.left;
+        const artworkOffsetX = -(visibleBounds.left + visibleBounds.right) / 2;
+        const edgePadding = creatureWidth / 2 + edgeInset;
         const leftEdge = edgePadding;
         const rightEdge = Math.max(leftEdge, canvasWidth - edgePadding);
         const cycleDuration = flipAtEdges
@@ -327,8 +350,12 @@ const setupFishPage = () => {
                 );
             }
         } else {
-            const returnAmount = reduceMotion ? 1 : Math.min(1, frameElapsed * 0.001);
-            creatureState.x += (x - creatureState.x) * returnAmount;
+            const returnAmount = reduceMotion || followPathExactly
+                ? 1
+                : Math.min(1, frameElapsed * 0.001);
+            creatureState.x = followPathExactly
+                ? x
+                : creatureState.x + (x - creatureState.x) * returnAmount;
             creatureState.y += (normalY - creatureState.y) * returnAmount;
         }
 
@@ -344,7 +371,7 @@ const setupFishPage = () => {
         context.textBaseline = "alphabetic";
 
         artwork.forEach((line, index) => {
-            let characterX = -creatureWidth / 2;
+            let characterX = artworkOffsetX;
             for (const character of line) {
                 context.fillStyle = colorMap[character] || "lightgreen";
                 context.fillText(character, characterX, startY + index * lineHeight);
@@ -501,9 +528,11 @@ const setupFishPage = () => {
             verticalPosition: 0.78,
             bobSpeed: 0.0023,
             colorMap: jellyfishCharacterColors,
-            sizeScale: 0.8,
+            sizeScale: 0.96,
             phaseOffset: 6000,
             flipAtEdges: false,
+            edgeInset: 0,
+            followPathExactly: true,
         });
         drawCreature({
             id: "fishThree",

@@ -8,8 +8,12 @@ const sampleContext = sampleCanvas.getContext("2d", {
 const NAME = "benjury.dev";
 const CHARACTERS = ["@", "$", "#", "%", "!", "&", "*"];
 const points = [];
-const characterSprites = [];
-const frameInterval = 1000 / 30;
+const characterAtlas = document.createElement("canvas");
+const spriteSize = 12;
+const shadeCount = 5;
+const frameInterval = 1000 / 60;
+const physicsInterval = 1000 / 30;
+const cameraDistance = 900;
 const dragSensitivity = 0.01;
 const friction = 0.95;
 const maxVelocity = 0.006;
@@ -26,7 +30,9 @@ const introScatterDepth = 1100;
 
 let width = 0;
 let height = 0;
-let modelWidth = 0;
+let layoutWidth = 0;
+let layoutHeight = 0;
+let modelRadius = 0;
 let modelHeight = 0;
 let pixelRatio = 1;
 let animationFrame = 0;
@@ -48,27 +54,22 @@ const easeOutCubic = (value) => {
 
 const buildCharacterSprites = () => {
     const colors = ["#277a27", "#3e9f3e", "#58c758", "#78e878", "#a2f5a2"];
+    characterAtlas.width = CHARACTERS.length * spriteSize;
+    characterAtlas.height = colors.length * spriteSize;
+    const spriteContext = characterAtlas.getContext("2d");
+    spriteContext.font = "10px Consolas, monospace";
+    spriteContext.textAlign = "center";
+    spriteContext.textBaseline = "middle";
 
-    characterSprites.length = 0;
-
-    for (const character of CHARACTERS) {
-        const shades = [];
-
-        for (const color of colors) {
-            const sprite = document.createElement("canvas");
-            const spriteContext = sprite.getContext("2d");
-
-            sprite.width = 12;
-            sprite.height = 12;
-            spriteContext.fillStyle = color;
-            spriteContext.font = "10px Consolas, monospace";
-            spriteContext.textAlign = "center";
-            spriteContext.textBaseline = "middle";
-            spriteContext.fillText(character, 6, 6);
-            shades.push(sprite);
+    for (let characterIndex = 0; characterIndex < CHARACTERS.length; characterIndex += 1) {
+        for (let shade = 0; shade < colors.length; shade += 1) {
+            spriteContext.fillStyle = colors[shade];
+            spriteContext.fillText(
+                CHARACTERS[characterIndex],
+                characterIndex * spriteSize + spriteSize / 2,
+                shade * spriteSize + spriteSize / 2
+            );
         }
-
-        characterSprites.push(shades);
     }
 };
 
@@ -122,7 +123,7 @@ const buildNamePoints = () => {
 
     const centerX = (minX + maxX) / 2;
     const centerY = (minY + maxY) / 2;
-    modelWidth = maxX - minX + sampleStep;
+    modelRadius = 0;
     modelHeight = maxY - minY + sampleStep;
 
     for (const surfacePoint of surfacePoints) {
@@ -138,6 +139,7 @@ const buildNamePoints = () => {
             const targetX = surfacePoint.x - centerX;
             const targetY = surfacePoint.y - centerY;
             const targetZ = (depthPosition - 0.5) * depth;
+            modelRadius = Math.max(modelRadius, Math.hypot(targetX, targetY, targetZ));
             const scatterAngle = depthJitter * Math.PI * 2;
             const scatterSeed = Math.sin(
                 surfacePoint.x * 93.9898
@@ -159,7 +161,7 @@ const buildNamePoints = () => {
                 startY: Math.sin(scatterAngle) * scatterRadius
                     + ((scatterYSeed - Math.floor(scatterYSeed)) - 0.5) * introScatterHeight,
                 startZ: ((scatterZSeed - Math.floor(scatterZSeed)) - 0.5) * introScatterDepth,
-                characterIndex,
+                spriteX: characterIndex * spriteSize,
             });
         }
     }
@@ -171,9 +173,12 @@ const resizeCanvas = () => {
     }
 
     const bounds = canvas.getBoundingClientRect();
+    const layoutBounds = canvas.parentElement.getBoundingClientRect();
     pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
     width = bounds.width;
     height = bounds.height;
+    layoutWidth = layoutBounds.width;
+    layoutHeight = layoutBounds.height;
     canvas.width = Math.round(width * pixelRatio);
     canvas.height = Math.round(height * pixelRatio);
 };
@@ -185,21 +190,25 @@ const draw = (time) => {
 
     animationFrame = requestAnimationFrame(draw);
 
-    if (time - lastDrawTime < frameInterval) {
+    const elapsed = time - lastDrawTime;
+
+    // Allow timestamp rounding, and carry the remainder to avoid skipped refreshes.
+    if (elapsed < frameInterval - 0.5) {
         return;
     }
 
     const deltaTime = Math.min(time - previousTime, 50);
     previousTime = time;
-    lastDrawTime = time;
+    lastDrawTime += frameInterval * Math.max(1, Math.floor((elapsed + 0.5) / frameInterval));
 
     if (!isDragging) {
         velocityX += -angleX * returnStrength * deltaTime;
         velocityY += -angleY * returnStrength * deltaTime;
         angleX += velocityX * deltaTime;
         angleY += velocityY * deltaTime;
-        velocityX *= friction;
-        velocityY *= friction;
+        const damping = Math.pow(friction, deltaTime / physicsInterval);
+        velocityX *= damping;
+        velocityY *= damping;
 
         if (Math.abs(angleX) < restThreshold && Math.abs(velocityX) < 0.00001) {
             angleX = 0;
@@ -212,9 +221,14 @@ const draw = (time) => {
         }
     }
 
-    const cameraDistance = 900;
-    const horizontalScale = (width * 0.92) / modelWidth;
-    const verticalScale = (height * 0.72) / Math.max(modelHeight, 1);
+    // A sphere enclosing the name bounds its perspective width at every rotation.
+    // Reserve half the largest character size at both edges as well.
+    const projectedRadius = modelRadius * cameraDistance
+        / Math.sqrt(cameraDistance * cameraDistance - modelRadius * modelRadius);
+    // Keep the assembled name fitted to the content area while particles use the viewport.
+    const horizontalScale = Math.max(0, layoutWidth * 0.92 - 11)
+        / Math.max(2 * projectedRadius, 1);
+    const verticalScale = (layoutHeight * 0.72) / Math.max(modelHeight, 1);
     const baseScale = Math.min(horizontalScale, verticalScale);
     const wobbleTime = time * 0.001;
     const wobbleAmount = !isDragging && !reduceMotion ? 1 : 0;
@@ -231,34 +245,50 @@ const draw = (time) => {
     const centerY = height / 2;
     const introElapsed = reduceMotion ? introDuration : time - introStartTime;
     const introProgress = easeOutCubic(Math.min(Math.max(introElapsed / introDuration, 0), 1));
+    const introComplete = introProgress === 1;
+
+    // Compose the rotation once per frame instead of repeating it for every point.
+    const xx = cosZ * cosY;
+    const xy = -sinZ * cosY;
+    const xz = -sinY;
+    const yx = sinZ * cosX - cosZ * sinY * sinX;
+    const yy = cosZ * cosX + sinZ * sinY * sinX;
+    const yz = -cosY * sinX;
+    const zx = sinZ * sinX + cosZ * sinY * cosX;
+    const zy = cosZ * sinX - sinZ * sinY * cosX;
+    const zz = cosY * cosX;
 
     context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    context.clearRect(0, 0, width, height);
     context.fillStyle = "#000";
     context.fillRect(0, 0, width, height);
 
     for (const point of points) {
-        const pointX = point.startX + (point.x - point.startX) * introProgress;
-        const pointY = point.startY + (point.y - point.startY) * introProgress;
-        const pointZ = point.startZ + (point.z - point.startZ) * introProgress;
-        const rolledX = pointX * cosZ - pointY * sinZ;
-        const rolledY = pointX * sinZ + pointY * cosZ;
-        const rotatedX = rolledX * cosY - pointZ * sinY;
-        const rotatedZ = rolledX * sinY + pointZ * cosY;
-        const rotatedY = rolledY * cosX - rotatedZ * sinX;
-        const finalZ = rolledY * sinX + rotatedZ * cosX;
+        const pointX = introComplete ? point.x : point.startX + (point.x - point.startX) * introProgress;
+        const pointY = introComplete ? point.y : point.startY + (point.y - point.startY) * introProgress;
+        const pointZ = introComplete ? point.z : point.startZ + (point.z - point.startZ) * introProgress;
+        const rotatedX = pointX * xx + pointY * xy + pointZ * xz;
+        const rotatedY = pointX * yx + pointY * yy + pointZ * yz;
+        const finalZ = pointX * zx + pointY * zy + pointZ * zz;
         const perspective = cameraDistance / (cameraDistance + finalZ);
         const size = Math.max(4.5, Math.min(11, 7.5 * baseScale * perspective));
-        const shades = characterSprites[point.characterIndex];
         const spriteIndex = Math.max(
             0,
-            Math.min(shades.length - 1, Math.floor((80 - finalZ) / 40))
+            Math.min(shadeCount - 1, Math.floor((80 - finalZ) / 40))
         );
         const x = centerX + rotatedX * baseScale * perspective;
         const y = centerY + rotatedY * baseScale * perspective;
 
+        if (x + size / 2 < 0 || x - size / 2 > width
+            || y + size / 2 < 0 || y - size / 2 > height) {
+            continue;
+        }
+
         context.drawImage(
-            shades[spriteIndex],
+            characterAtlas,
+            point.spriteX,
+            spriteIndex * spriteSize,
+            spriteSize,
+            spriteSize,
             x - size / 2,
             y - size / 2,
             size,
@@ -269,11 +299,13 @@ const draw = (time) => {
 
 const startAnimation = () => {
     cancelAnimationFrame(animationFrame);
-    buildCharacterSprites();
-    buildNamePoints();
+    if (points.length === 0) {
+        buildCharacterSprites();
+        buildNamePoints();
+    }
     resizeCanvas();
     previousTime = performance.now();
-    lastDrawTime = 0;
+    lastDrawTime = previousTime;
     angleX = 0;
     angleY = 0;
     velocityX = 0;
@@ -337,7 +369,7 @@ const setupCanvas = () => {
         return null;
     }
 
-    context = canvas.getContext("2d");
+    context = canvas.getContext("2d", { alpha: false });
 
     window.addEventListener("resize", resizeCanvas);
     canvas.addEventListener("pointerdown", startDragging);
