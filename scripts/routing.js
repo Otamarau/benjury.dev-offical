@@ -54,7 +54,7 @@ const routes = {
         setup: setupTerminal,
     },
     fish: {
-        label: "Fish_Tank",
+        label: "My_Fish_Tank",
         render: renderFishPage,
         setup: setupFishPage,
     },
@@ -79,6 +79,8 @@ const navigateTo = (routeName, shouldUpdateHash = true) => {
     if (shouldUpdateHash && window.location.hash !== `#${normalizedRouteName}`) {
         window.location.hash = normalizedRouteName;
     }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
 };
 
 document.addEventListener("click", (event) => {

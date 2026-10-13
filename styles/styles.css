@@ -23,9 +23,19 @@
         0 0 28px rgb(144 238 144 / 10%);
 } */
 
+html,
+body {
+    scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+    display: none;
+}
+
 body {
     margin: 0;
-    padding: 0;
+    padding: 70px 0 0;
     font-family: Consolas, monospace;
     width: 100%;
     height: 100vh;
@@ -53,12 +63,33 @@ button {
     /* border-radius: 10px; */
 }
 
+h1 {
+    color: white;
+    font-size: 20px;
+    margin: 0;
+    padding: 0;
+}
+
+p2 {
+    color: white;
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+h2 {
+    color: white;
+    font-size: 18px;
+    margin: 0;
+    padding: 0;
+}
+
 #projects:hover{
     color: yellow;
     border-color: yellow;
 }
 
-#fish:hover{
+#nav-fish:hover{
     color: blue;
     border-color: blue;
 }
@@ -69,9 +100,11 @@ button {
 }
 
 #github:hover{
-    color: red;
-    border-color: red;
+    color: purple;
+    border-color: purple;
 }
+
+
 
 #nav-con h1 {
     color: white;
@@ -104,11 +137,14 @@ button {
 
 
 nav {
-    position: relative;
-    z-index: 1;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
     width: 100%;
     height: 70px;
-    /* background-color: black; */
+    min-height: 70px;
+    background-color: black;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -145,7 +181,7 @@ nav {
     margin: 20px 0;
     /* background-color: green; */
     display: flex;
-    justify-content: center;
+    justify-content: flex-start;
     flex-direction: column;
     align-items: center;
     overflow: visible;
@@ -160,6 +196,7 @@ body:has(#home-hero) {
 }
 
 #main-con:has(> #home-hero) {
+    --home-hero-height: 60vh;
     position: relative;
     width: 100%;
     flex: none;
@@ -169,11 +206,13 @@ body:has(#home-hero) {
 
 #home-hero {
     width: 80%;
-    height: 100vh;
+    height: var(--home-hero-height);
     flex: none;
 }
 
 #about-me {
+    position: relative;
+    z-index: 1;
     width: 80%;
     padding: 40px 0;
     color: white;
@@ -212,7 +251,6 @@ body:has(#home-hero) {
 
 
 @media (max-width: 700px) {
-    #nav-con,
     #home-hero,
     #about-me,
     #main-con {

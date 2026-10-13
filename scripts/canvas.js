@@ -228,8 +228,9 @@ const draw = (time) => {
     // Keep the assembled name fitted to the content area while particles use the viewport.
     const horizontalScale = Math.max(0, layoutWidth * 0.92 - 11)
         / Math.max(2 * projectedRadius, 1);
-    const verticalScale = (layoutHeight * 0.72) / Math.max(modelHeight, 1);
-    const baseScale = Math.min(horizontalScale, verticalScale);
+    // Preserve the original 80vh sizing independently of the shorter hero section.
+    const verticalScale = (height * 0.8 * 0.72) / Math.max(modelHeight, 1);
+    const baseScale = Math.min(horizontalScale, verticalScale) * 1.1;
     const wobbleTime = time * 0.001;
     const wobbleAmount = !isDragging && !reduceMotion ? 1 : 0;
     const displayAngleX = angleX + Math.sin(wobbleTime * 0.9) * wobblePitch * wobbleAmount;
@@ -242,7 +243,7 @@ const draw = (time) => {
     const cosZ = Math.cos(displayAngleZ);
     const sinZ = Math.sin(displayAngleZ);
     const centerX = width / 2;
-    const centerY = height / 2;
+    const centerY = layoutHeight / 2;
     const introElapsed = reduceMotion ? introDuration : time - introStartTime;
     const introProgress = easeOutCubic(Math.min(Math.max(introElapsed / introDuration, 0), 1));
     const introComplete = introProgress === 1;

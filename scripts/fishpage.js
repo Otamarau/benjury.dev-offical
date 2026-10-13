@@ -73,10 +73,16 @@ const getPersistentCharacterColors = (storageKey, baseColors) => {
     return randomColors;
 };
 
-const fishOneCharacterColors = getPersistentCharacterColors(
-    "asciiFish.colors.fishOne",
-    jellyfishCharacterColors
-);
+const fishOneCharacterColors = {
+    "/": "gold",
+    "\\": "gold",
+    "_": "gold",
+    "<": "orange",
+    ">": "orange",
+    "|": "darkorange",
+    "o": "lightskyblue",
+    ")": "orange",
+};
 const fishThreeCharacterColors = getPersistentCharacterColors(
     "asciiFish.colors.fishThree",
     jellyfishCharacterColors
@@ -88,13 +94,16 @@ const fishFourCharacterColors = getPersistentCharacterColors(
 
 const renderFishPage = () => {
     return `
+        ${aboutFish()}
         <div id="fishpage-con">
             <canvas id="ascii-fish" aria-label="Four ASCII sea creatures swimming back and forth">
                 ASCII sea creatures
             </canvas>
         </div>
+        ${fishDesc()}
     `;
 };
+
 
 const setupFishPage = () => {
     const canvas = document.getElementById("ascii-fish");
@@ -104,11 +113,14 @@ const setupFishPage = () => {
     }
 
     const context = canvas.getContext("2d");
-    const fish = [
-        "           /\"*._         _",
-        "      .-*'`    `*-.._.-'/",
-        "    < * ))     ,       (",
-        "      `*-._`._(__.--*\"`\\",
+    const fishOne = [
+        "       /|",
+        "     /| |\\",
+        "   /o)| | \\  /|",
+        "  <   | |  >< |",
+        "   \\ | | /  \\|",
+        "     \\| |/",
+        "       \\|",
     ];
     const fishTwo = [
         "      _______",
@@ -133,6 +145,25 @@ const setupFishPage = () => {
         ">....{...|<.|",
         " \\######/  \\|",
     ];
+    const portraits = [
+        ["fishOne", fishOne, fishOneCharacterColors],
+        ["fishTwo", fishTwo, jellyfishCharacterColors],
+        ["fishThree", fishThree, fishThreeCharacterColors],
+        ["fishFour", fishFour, fishFourCharacterColors],
+    ];
+    portraits.forEach(([id, artwork, colors]) => {
+        const portrait = document.getElementById(`${id}-portrait`);
+        if (!portrait) return;
+        const drawing = document.createElement("span");
+        for (const character of artwork.join("\n")) {
+            const span = document.createElement("span");
+            span.textContent = character;
+            span.style.color = colors[character] || "lightgreen";
+            drawing.appendChild(span);
+        }
+        portrait.replaceChildren(drawing);
+    });
+
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const fishSwimDurations = {
         fishOne: 20873,
@@ -150,6 +181,29 @@ const setupFishPage = () => {
     const footballColor = "gold";
     const creatureStates = {};
     const hungerCooldown = 15 * 60 * 1000;
+    const hungerDisplays = fishProfiles.map(({ id }) => ({
+        id,
+        meter: document.getElementById(`${id}-hunger`),
+        status: document.getElementById(`${id}-status`),
+    }));
+    const updateHungerMeters = () => {
+        const now = Date.now();
+        hungerDisplays.forEach(({ id, meter, status }) => {
+            const lastAteAt = creatureStates[id]?.lastAteAt;
+            const hunger = lastAteAt
+                ? Math.min(100, Math.max(0, (now - lastAteAt) / hungerCooldown * 100))
+                : 100;
+            if (meter) {
+                meter.value = hunger;
+                meter.textContent = `${Math.round(hunger)}%`;
+                meter.setAttribute("aria-valuetext", `${Math.round(hunger)}% hungry`);
+            }
+            if (status) {
+                status.textContent = hunger >= 100 ? "Hungry" : hunger < 30 ? "Full" : "Digesting";
+            }
+        });
+    };
+
     const bubbles = Array.from({ length: 18 }, () => ({
         character: bubbleCharacters[Math.floor(Math.random() * bubbleCharacters.length)],
         horizontalPosition: 0.05 + Math.random() * 0.9,
@@ -232,6 +286,7 @@ const setupFishPage = () => {
             y: null,
             growth: 0,
             lastAteAt: 0,
+            returningToPatrol: false,
         };
         creatureStates[id] = creatureState;
         const longestLineLength = Math.max(...artwork.map((line) => line.length));
@@ -320,6 +375,7 @@ const setupFishPage = () => {
         }
 
         if (availableFood && !reduceMotion) {
+            creatureState.returningToPatrol = true;
             scaleX = availableFood.x < creatureState.x ? 1 : -1;
             const mouthOffset = scaleX * creatureWidth / 2;
             const targetX = availableFood.x + mouthOffset;
@@ -337,6 +393,7 @@ const setupFishPage = () => {
             if (mouthDistance < 14) {
                 if (!availableFood.eatenBy) {
                     creatureState.lastAteAt = Date.now();
+                    updateHungerMeters();
                 }
 
                 availableFood.eatenBy = id;
@@ -350,13 +407,25 @@ const setupFishPage = () => {
                 );
             }
         } else {
-            const returnAmount = reduceMotion || followPathExactly
+            const returningToPatrol = creatureState.returningToPatrol && !reduceMotion;
+            const distanceX = x - creatureState.x;
+            const distanceY = normalY - creatureState.y;
+            const distance = Math.hypot(distanceX, distanceY);
+            const returnAmount = reduceMotion || (followPathExactly && !returningToPatrol)
                 ? 1
-                : Math.min(1, frameElapsed * 0.001);
-            creatureState.x = followPathExactly
-                ? x
-                : creatureState.x + (x - creatureState.x) * returnAmount;
-            creatureState.y += (normalY - creatureState.y) * returnAmount;
+                : returningToPatrol
+                    ? Math.min(1, frameElapsed * 0.18 / Math.max(distance, 0.001))
+                    : Math.min(1, frameElapsed * 0.001);
+            creatureState.x += distanceX * returnAmount;
+            creatureState.y += distanceY * returnAmount;
+
+            if (returningToPatrol && Math.abs(distanceX) > 1) {
+                scaleX = distanceX < 0 ? 1 : -1;
+            }
+
+            if (returnAmount === 1) {
+                creatureState.returningToPatrol = false;
+            }
         }
 
         x = creatureState.x;
@@ -511,17 +580,18 @@ const setupFishPage = () => {
 
         drawCreature({
             id: "fishOne",
-            artwork: fish,
+            artwork: fishOne,
             time,
             duration: fishSwimDurations.fishOne,
             verticalPosition: 0.38,
             bobSpeed: 0.003,
             colorMap: fishOneCharacterColors,
-            sizeScale: 1.3,
+            sizeScale: 1.1,
             seeksFood: true,
         });
         drawCreature({
             id: "fishTwo",
+            seeksFood: true,
             artwork: fishTwo,
             time,
             duration: fishSwimDurations.fishTwo,
@@ -598,11 +668,15 @@ const setupFishPage = () => {
         }
     };
 
+    updateHungerMeters();
+    const hungerInterval = window.setInterval(updateHungerMeters, 1000);
+
     window.addEventListener("resize", queueDrawFish);
     canvas.addEventListener("click", dropFootball);
     animationFrame = requestAnimationFrame(drawFish);
 
     return () => {
+        window.clearInterval(hungerInterval);
         cancelAnimationFrame(animationFrame);
         window.removeEventListener("resize", queueDrawFish);
         canvas.removeEventListener("click", dropFootball);
