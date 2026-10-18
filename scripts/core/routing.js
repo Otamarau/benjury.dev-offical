@@ -45,6 +45,11 @@ const renderAboutPage = () => {
 };
 
 const routes = {
+    projects: {
+        label: "Projects",
+        render: renderProjectsPage,
+        setup: setupProjectsPage,
+    },
     home: {
         render: renderHomePage,
         setup: setupCanvas,
