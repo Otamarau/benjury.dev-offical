@@ -1,0 +1,179 @@
+body:has(#contact-page) {
+    height: auto;
+    overflow-y: auto;
+}
+
+#contact-page {
+    width: 100%;
+    max-width: 680px;
+    /* padding: 40px 0 56px; */
+    color: #f5f5f5;
+}
+
+.contact-intro {
+    margin-bottom: 36px;
+    text-align: center;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#contact-title {
+    font-size: clamp(32px, 4vw, 44px);
+    font-weight: 500;
+    letter-spacing: -0.035em;
+    line-height: 1.2;
+}
+
+.contact-intro p {
+    max-width: 48ch;
+    margin: 18px auto 0;
+    color: #b8b8b8;
+    font-size: 17px;
+    line-height: 1.8;
+    text-wrap: pretty;
+}
+
+#contact-form {
+    display: grid;
+    gap: 24px;
+    padding-top: 32px;
+    border-top: 1px solid #393939;
+}
+
+.contact-fields-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.contact-field {
+    display: grid;
+    min-width: 0;
+    gap: 10px;
+}
+
+.contact-field label {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.contact-field label span {
+    color: #999;
+    font-size: 12px;
+}
+
+.contact-field input,
+.contact-field textarea {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    border: 1px solid #494949;
+    border-radius: 0;
+    padding: 12px 14px;
+    background: #0b0b0b;
+    color: #f5f5f5;
+    font: 16px/1.6 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.contact-field textarea {
+    min-height: 180px;
+    resize: vertical;
+}
+
+.contact-field input:focus,
+.contact-field textarea:focus {
+    outline: 2px solid lightgreen;
+    outline-offset: 3px;
+}
+
+.contact-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+#contact-form-note,
+#contact-status,
+.contact-direct {
+    margin: 0;
+    font: 14px/1.7 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #b8b8b8;
+}
+
+#contact-form-note {
+    max-width: 34ch;
+}
+
+.contact-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-shrink: 0;
+    min-height: 48px;
+    height: auto;
+    padding: 12px 18px;
+    font-size: 14px;
+}
+
+.contact-actions button:hover {
+    color: #ffabab;
+    border-color: #ffabab;
+}
+
+.contact-actions button:focus-visible,
+.contact-direct a:focus-visible {
+    outline: 2px solid #ffabab;
+    outline-offset: 4px;
+}
+
+#contact-status {
+    color: #ffabab;
+}
+
+.contact-direct {
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid #292929;
+    text-align: center;
+}
+
+.contact-direct a {
+    display: inline-block;
+    color: #f5f5f5;
+    text-underline-offset: 4px;
+    overflow-wrap: anywhere;
+}
+
+.contact-direct a:hover {
+    color: #ffabab;
+}
+
+@media (max-width: 700px) {
+    #contact-page {
+        width: calc(100% - 16px);
+        padding-top: 24px;
+    }
+
+    .contact-intro p {
+        font-size: 16px;
+    }
+
+    .contact-fields-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .contact-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+
+    #contact-form-note {
+        max-width: none;
+    }
+
+    .contact-actions button {
+        width: 100%;
+    }
+}

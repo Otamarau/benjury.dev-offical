@@ -41,5 +41,5 @@
         }
     });
 
-    window.addEventListener("hashchange", () => setOpen(false));
+    window.addEventListener("routechange", () => setOpen(false));
 })();

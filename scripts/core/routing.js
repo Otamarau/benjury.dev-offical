@@ -45,6 +45,11 @@ const renderAboutPage = () => {
 };
 
 const routes = {
+    contact: {
+        label: "Contact",
+        render: renderContactPage,
+        setup: setupContactPage,
+    },
     projects: {
         label: "Projects",
         render: renderProjectsPage,
@@ -67,10 +72,12 @@ const routes = {
 
 let currentCleanup = null;
 
-const navigateTo = (routeName, shouldUpdateHash = true) => {
+const getRoutePath = (routeName) => routeName === "home" ? "/" : `/${routeName}`;
+
+const navigateTo = (routeName, shouldUpdateHistory = true) => {
     const mainCon = document.querySelector("#main-con");
-    const route = routes[routeName] ?? routes.home;
-    const normalizedRouteName = routes[routeName] ? routeName : "home";
+    const normalizedRouteName = Object.hasOwn(routes, routeName) ? routeName : "home";
+    const route = routes[normalizedRouteName];
 
     if (currentCleanup) {
         currentCleanup();
@@ -81,11 +88,28 @@ const navigateTo = (routeName, shouldUpdateHash = true) => {
     document.getElementById("page-label").textContent = route.label ?? "Welcome";
     currentCleanup = route.setup?.() ?? null;
 
-    if (shouldUpdateHash && window.location.hash !== `#${normalizedRouteName}`) {
-        window.location.hash = normalizedRouteName;
+    const routePath = getRoutePath(normalizedRouteName) + window.location.search;
+    if (shouldUpdateHistory && window.location.pathname + window.location.search + window.location.hash !== routePath) {
+        window.history.pushState(null, "", routePath);
     }
 
+    window.dispatchEvent(new Event("routechange"));
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+};
+
+const syncRouteFromLocation = () => {
+    // Keep old bookmarks working, replacing their fragment with the clean path.
+    const legacyRoute = window.location.hash.slice(1);
+    const pathRoute = window.location.pathname.replace(/^\/+|\/+$/g, "");
+    const requestedRoute = Object.hasOwn(routes, legacyRoute) ? legacyRoute : pathRoute;
+    const routeName = Object.hasOwn(routes, requestedRoute) ? requestedRoute : "home";
+    const routePath = getRoutePath(routeName) + window.location.search;
+
+    if (window.location.pathname + window.location.search + window.location.hash !== routePath) {
+        window.history.replaceState(null, "", routePath);
+    }
+
+    navigateTo(routeName, false);
 };
 
 document.addEventListener("click", (event) => {
@@ -98,8 +122,9 @@ document.addEventListener("click", (event) => {
     navigateTo(routeTarget.dataset.route);
 });
 
+window.addEventListener("popstate", syncRouteFromLocation);
 window.addEventListener("hashchange", () => {
-    navigateTo(window.location.hash.slice(1) || "home", false);
+    if (window.location.hash) syncRouteFromLocation();
 });
 
-navigateTo(window.location.hash.slice(1) || "home", false);
+syncRouteFromLocation();
