@@ -3,9 +3,9 @@ const aboutMe = () => {
         <section id="about-me" aria-labelledby="about-me-title">
             <div class="home-copy-section">
                 <div class="home-copy">
-                    <h2 id="about-me-title" class="home-intro">Hello, I'm Ben Jury.</h2>
+                    <h2 id="about-me-title" class="home-intro">Hello, welcome to my site</h2>
                     <p>
-                        This is where I have fun with web development. It's still a work in progress, but I hope you enjoy exploring.
+                        This site is still a work in progress. But I hope you enjoy.
                     </p>
                 </div>
             </div>

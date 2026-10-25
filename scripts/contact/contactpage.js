@@ -28,7 +28,7 @@ const renderContactPage = () => `
             </div>
 
             <div class="contact-actions">
-                <p id="contact-form-note">This form isn't accepting messages yet. You can email me below.</p>
+                <p id="contact-form-note"></p>
                 <button type="submit">Send message <span aria-hidden="true">&rarr;</span></button>
             </div>
             <p id="contact-status" role="status" aria-live="polite" hidden></p>

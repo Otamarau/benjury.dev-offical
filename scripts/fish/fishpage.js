@@ -96,7 +96,7 @@ const renderFishPage = () => {
     return `
         ${aboutFish()}
         <div id="fishpage-con">
-            <canvas id="ascii-fish" aria-label="Four ASCII sea creatures swimming back and forth">
+            <canvas id="ascii-fish" aria-label="Four ASCII sea creatures exploring the tank and eating food">
                 ASCII sea creatures
             </canvas>
         </div>
@@ -165,14 +165,6 @@ const setupFishPage = () => {
     });
 
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const fishSwimDurations = {
-        fishOne: 20873,
-        fishTwo: 19178,
-        fishThree: 22897,
-        fishFour: 23760,
-    };
-    const turnDuration = 700;
-    const bobHeight = 12;
     const waterSurfacePosition = 0.15;
     const bubbleCharacters = [".", "0", "o"];
     const footballs = [];
@@ -270,15 +262,9 @@ const setupFishPage = () => {
         id,
         artwork,
         time,
-        duration,
         verticalPosition,
-        bobSpeed,
         colorMap,
         sizeScale = 1,
-        phaseOffset = 0,
-        flipAtEdges = true,
-        edgeInset = 0,
-        followPathExactly = true,
         seeksFood = false,
     }) => {
         const creatureState = creatureStates[id] ?? {
@@ -286,7 +272,17 @@ const setupFishPage = () => {
             y: null,
             growth: 0,
             lastAteAt: 0,
-            returningToPatrol: false,
+            destination: null,
+            foodTarget: null,
+            pauseRemaining: 0,
+            cruiseSpeed: 0,
+            speed: 0,
+            facing: -1,
+            scaleX: -1,
+            bobOffset: 0,
+            bobPhase: Math.random() * Math.PI * 2,
+            bobSpeed: 0.0015 + Math.random() * 0.001,
+            bobHeight: 3 + Math.random() * 3,
         };
         creatureStates[id] = creatureState;
         const longestLineLength = Math.max(...artwork.map((line) => line.length));
@@ -324,112 +320,127 @@ const setupFishPage = () => {
         );
         const creatureWidth = visibleBounds.right - visibleBounds.left;
         const artworkOffsetX = -(visibleBounds.left + visibleBounds.right) / 2;
-        const edgePadding = creatureWidth / 2 + edgeInset;
-        const leftEdge = edgePadding;
-        const rightEdge = Math.max(leftEdge, canvasWidth - edgePadding);
-        const cycleDuration = flipAtEdges
-            ? (duration + turnDuration) * 2
-            : duration * 2;
-        const cycleTime = reduceMotion
-            ? duration / 2
-            : (time + phaseOffset) % cycleDuration;
-        let x = (leftEdge + rightEdge) / 2;
-        let scaleX = -1;
+        const leftEdge = Math.min(canvasWidth / 2, creatureWidth / 2 + 8);
+        const rightEdge = Math.max(leftEdge, canvasWidth - leftEdge);
+        const topEdge = Math.min(canvasHeight, canvasHeight * waterSurfacePosition + blockHeight / 2 + 8);
+        const bottomEdge = Math.max(topEdge, canvasHeight - blockHeight / 2 - 8);
+        const clampX = (value) => Math.max(leftEdge, Math.min(rightEdge, value));
+        const clampY = (value) => Math.max(topEdge, Math.min(bottomEdge, value));
+        const randomDestination = () => ({
+            x: leftEdge + Math.random() * (rightEdge - leftEdge),
+            y: topEdge + Math.random() * (bottomEdge - topEdge),
+        });
+        const chooseSpeed = () => 35 + Math.random() * 30;
 
-        if (!flipAtEdges && cycleTime >= duration) {
-            const progress = (cycleTime - duration) / duration;
-            x = rightEdge - (rightEdge - leftEdge) * progress;
-        } else if (cycleTime < duration) {
-            const progress = cycleTime / duration;
-            x = leftEdge + (rightEdge - leftEdge) * progress;
-        } else if (cycleTime < duration + turnDuration) {
-            const turnProgress = (cycleTime - duration) / turnDuration;
-            x = rightEdge;
-            scaleX = -Math.cos(turnProgress * Math.PI);
-        } else if (cycleTime < duration * 2 + turnDuration) {
-            const progress = (cycleTime - duration - turnDuration) / duration;
-            x = rightEdge - (rightEdge - leftEdge) * progress;
-            scaleX = 1;
-        } else {
-            const turnProgress = (cycleTime - duration * 2 - turnDuration) / turnDuration;
-            x = leftEdge;
-            scaleX = Math.cos(turnProgress * Math.PI);
+        if (creatureState.x === null) {
+            creatureState.x = randomDestination().x;
+            creatureState.y = clampY(canvasHeight * verticalPosition);
+            creatureState.destination = randomDestination();
+            creatureState.cruiseSpeed = chooseSpeed();
         }
+        creatureState.x = clampX(creatureState.x);
+        creatureState.y = clampY(creatureState.y);
 
-        const normalY = canvasHeight * verticalPosition
-            + (reduceMotion ? 0 : Math.sin(time * bobSpeed + phaseOffset) * bobHeight);
         const isHungry = Date.now() - creatureState.lastAteAt >= hungerCooldown;
-        const availableFood = seeksFood
-            ? footballs.find(
-                (football) => football.y >= canvasHeight * waterSurfacePosition
-                    && (
-                        football.eatenBy === id
-                        || (!football.eatenBy && isHungry)
-                    )
-            )
-            : null;
-
-        if (creatureState.x === null || creatureState.y === null) {
-            creatureState.x = x;
-            creatureState.y = normalY;
+        const canEat = (food) => footballs.includes(food)
+            && food.scale > 0.08
+            && food.y >= canvasHeight * waterSurfacePosition
+            && (food.eatenBy === id || (!food.eatenBy && isHungry));
+        let availableFood = creatureState.foodTarget;
+        if (!availableFood || !canEat(availableFood)) {
+            availableFood = seeksFood
+                ? footballs.filter(canEat).sort((a, b) =>
+                    Math.hypot(a.x - creatureState.x, a.y - creatureState.y)
+                    - Math.hypot(b.x - creatureState.x, b.y - creatureState.y)
+                )[0] ?? null
+                : null;
+        }
+        if (availableFood !== creatureState.foodTarget) {
+            creatureState.foodTarget = availableFood;
+            creatureState.cruiseSpeed = chooseSpeed();
+            // Losing a food target should send the fish exploring, not pause the group.
+            creatureState.pauseRemaining = 0;
+            creatureState.destination = randomDestination();
         }
 
-        if (availableFood && !reduceMotion) {
-            creatureState.returningToPatrol = true;
-            scaleX = availableFood.x < creatureState.x ? 1 : -1;
-            const mouthOffset = scaleX * creatureWidth / 2;
-            const targetX = availableFood.x + mouthOffset;
-            const approachAmount = Math.min(1, frameElapsed * 0.002);
-
-            creatureState.x += (targetX - creatureState.x) * approachAmount;
-            creatureState.y += (availableFood.y - creatureState.y) * approachAmount;
-
-            const mouthX = creatureState.x - mouthOffset;
-            const mouthDistance = Math.hypot(
-                mouthX - availableFood.x,
-                creatureState.y - availableFood.y
-            );
-
-            if (mouthDistance < 14) {
-                if (!availableFood.eatenBy) {
-                    creatureState.lastAteAt = Date.now();
-                    updateHungerMeters();
+        if (!reduceMotion) {
+            const seconds = frameElapsed / 1000;
+            if (availableFood) {
+                // Approach with the mouth facing the food, using the same swimming motion.
+                if (Math.abs(availableFood.x - creatureState.x) > creatureWidth / 2 + 4) {
+                    creatureState.facing = availableFood.x < creatureState.x ? 1 : -1;
                 }
-
-                availableFood.eatenBy = id;
-                availableFood.scale = Math.max(
-                    0.08,
-                    availableFood.scale - frameElapsed * 0.0008
-                );
-                creatureState.growth = Math.min(
-                    0.14,
-                    creatureState.growth + frameElapsed * 0.00012
-                );
-            }
-        } else {
-            const returningToPatrol = creatureState.returningToPatrol && !reduceMotion;
-            const distanceX = x - creatureState.x;
-            const distanceY = normalY - creatureState.y;
-            const distance = Math.hypot(distanceX, distanceY);
-            const returnAmount = reduceMotion || (followPathExactly && !returningToPatrol)
-                ? 1
-                : returningToPatrol
-                    ? Math.min(1, frameElapsed * 0.18 / Math.max(distance, 0.001))
-                    : Math.min(1, frameElapsed * 0.001);
-            creatureState.x += distanceX * returnAmount;
-            creatureState.y += distanceY * returnAmount;
-
-            if (returningToPatrol && Math.abs(distanceX) > 1) {
-                scaleX = distanceX < 0 ? 1 : -1;
+                creatureState.destination = {
+                    x: clampX(availableFood.x + creatureState.facing * creatureWidth / 2),
+                    y: clampY(availableFood.y),
+                };
             }
 
-            if (returnAmount === 1) {
-                creatureState.returningToPatrol = false;
+            if (creatureState.pauseRemaining > 0) {
+                creatureState.pauseRemaining = Math.max(0, creatureState.pauseRemaining - seconds);
+                creatureState.speed = 0;
+                if (creatureState.pauseRemaining === 0) {
+                    creatureState.destination = randomDestination();
+                    creatureState.cruiseSpeed = chooseSpeed();
+                }
+            } else {
+                const target = creatureState.destination;
+                target.x = clampX(target.x);
+                target.y = clampY(target.y);
+                const dx = target.x - creatureState.x;
+                const dy = target.y - creatureState.y;
+                const distance = Math.hypot(dx, dy);
+                const desiredSpeed = Math.min(creatureState.cruiseSpeed, distance * 1.8);
+                creatureState.speed += (desiredSpeed - creatureState.speed) * (1 - Math.exp(-seconds * 3));
+                const step = Math.min(distance, creatureState.speed * seconds);
+                if (distance > 0) {
+                    creatureState.x += dx / distance * step;
+                    creatureState.y += dy / distance * step;
+                }
+                if (!availableFood && Math.abs(dx) > 3) {
+                    creatureState.facing = dx < 0 ? 1 : -1;
+                }
+                if (!availableFood && distance < 2) {
+                    const restingFish = Object.values(creatureStates).filter(
+                        (state) => state !== creatureState && state.pauseRemaining > 0
+                    ).length;
+                    if (restingFish < 2) {
+                        creatureState.pauseRemaining = 2 + Math.random() * 5;
+                        creatureState.speed = 0;
+                    } else {
+                        // Keep some life in the tank when other fish are already resting.
+                        creatureState.destination = randomDestination();
+                        creatureState.cruiseSpeed = chooseSpeed();
+                    }
+                }
+            }
+            creatureState.scaleX += (creatureState.facing - creatureState.scaleX)
+                * (1 - Math.exp(-seconds * 6));
+
+            if (availableFood) {
+                const mouthX = creatureState.x - creatureState.scaleX * creatureWidth / 2;
+                const mouthDistance = Math.hypot(mouthX - availableFood.x, creatureState.y - availableFood.y);
+                const foodRadius = footballFontSize * availableFood.scale / 2;
+                if (mouthDistance < foodRadius + 14 || availableFood.eatenBy === id) {
+                    if (!availableFood.eatenBy) {
+                        creatureState.lastAteAt = Date.now();
+                        updateHungerMeters();
+                    }
+                    availableFood.eatenBy = id;
+                    availableFood.scale = Math.max(0.08, availableFood.scale - frameElapsed * 0.0008);
+                    creatureState.growth = Math.min(0.14, creatureState.growth + frameElapsed * 0.00012);
+                }
             }
         }
 
-        x = creatureState.x;
-        const centerY = creatureState.y;
+        const targetBob = !reduceMotion
+            ? Math.sin(time * creatureState.bobSpeed + creatureState.bobPhase) * creatureState.bobHeight
+            : 0;
+        creatureState.bobOffset += (targetBob - creatureState.bobOffset)
+            * (1 - Math.exp(-frameElapsed * 0.004));
+        const x = creatureState.x;
+        const centerY = clampY(creatureState.y + creatureState.bobOffset);
+        const scaleX = creatureState.scaleX;
         const startY = -blockHeight / 2 + fontSize;
 
         context.save();
@@ -511,9 +522,10 @@ const setupFishPage = () => {
                     );
                     football.y += football.velocity * frameElapsed;
                 } else {
-                    football.y += frameElapsed * 0.025;
+                    football.y = Math.min(canvasHeight - 45, football.y + frameElapsed * 0.025);
                     football.x += Math.sin(time * 0.0015 + football.phase)
                         * frameElapsed * 0.015;
+                    football.x = Math.max(20, Math.min(canvasWidth - 20, football.x));
                 }
             }
 
@@ -582,9 +594,7 @@ const setupFishPage = () => {
             id: "fishOne",
             artwork: fishOne,
             time,
-            duration: fishSwimDurations.fishOne,
             verticalPosition: 0.38,
-            bobSpeed: 0.003,
             colorMap: fishOneCharacterColors,
             sizeScale: 1.1,
             seeksFood: true,
@@ -594,37 +604,25 @@ const setupFishPage = () => {
             seeksFood: true,
             artwork: fishTwo,
             time,
-            duration: fishSwimDurations.fishTwo,
             verticalPosition: 0.78,
-            bobSpeed: 0.0023,
             colorMap: jellyfishCharacterColors,
             sizeScale: 0.96,
-            phaseOffset: 6000,
-            flipAtEdges: false,
-            edgeInset: 0,
-            followPathExactly: true,
         });
         drawCreature({
             id: "fishThree",
             artwork: fishThree,
             time,
-            duration: fishSwimDurations.fishThree,
             verticalPosition: 0.58,
-            bobSpeed: 0.0026,
             colorMap: fishThreeCharacterColors,
-            phaseOffset: 11000,
             seeksFood: true,
         });
         drawCreature({
             id: "fishFour",
             artwork: fishFour,
             time,
-            duration: fishSwimDurations.fishFour,
             verticalPosition: 0.26,
-            bobSpeed: 0.002,
             colorMap: fishFourCharacterColors,
             sizeScale: 0.9,
-            phaseOffset: 15000,
             seeksFood: true,
         });
         drawBubbles(time);
