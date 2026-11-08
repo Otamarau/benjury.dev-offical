@@ -1,12 +1,20 @@
 body:has(#contact-page) {
     height: auto;
+    min-height: 100dvh;
     overflow-y: auto;
 }
 
+#main-con:has(> #contact-page) {
+    flex: none;
+    /* Allow for the 70px navigation and 20px top/bottom margins. */
+    min-height: calc(100dvh - 110px);
+    justify-content: center;
+}
+
 #contact-page {
+    flex-shrink: 0;
     width: 100%;
     max-width: 680px;
-    /* padding: 40px 0 56px; */
     color: #f5f5f5;
 }
 

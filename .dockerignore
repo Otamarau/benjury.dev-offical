@@ -1,0 +1,11 @@
+node_modules
+.git
+.env
+.env.*
+.aws
+.codex
+.agents
+.vscode
+npm-debug.log*
+test
+README.md

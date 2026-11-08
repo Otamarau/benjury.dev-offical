@@ -1,14 +1,22 @@
 body:has(#fishpage-con) {
-    height: auto;
+    height: 100dvh;
+    min-height: 100dvh;
     overflow-y: auto;
 }
 
+#main-con:has(> #fishpage-con) {
+    min-height: auto;
+    max-width: 1440px;
+    --fish-border: #253b42;
+    --fish-accent: #a5e3db;
+}
+
 #about-fish {
+    flex-shrink: 0;
     width: 100%;
     text-align: center;
-    margin-bottom: 24px;
-    padding: 28px 0;
-    border-top: 1px solid #292929;
+    margin-bottom: 20px;
+    padding: 12px 0 0;
     scroll-margin-top: 90px;
     color: white;
 }
@@ -16,10 +24,10 @@ body:has(#fishpage-con) {
 #about-fish .fish-intro-copy {
     max-width: 62ch;
     margin-inline: auto;
-    color: #b8b8b8;
+    color: #94a8ad;
     font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    font-size: 17px;
-    line-height: 1.8;
+    font-size: 15px;
+    line-height: 1.6;
 }
 
 #about-fish p {
@@ -28,43 +36,53 @@ body:has(#fishpage-con) {
 }
 
 #about-fish .fish-intro-lead + p {
-    margin-top: 18px;
+    margin-top: 10px;
 }
 
 #about-fish .fish-intro-lead {
     color: #f5f5f5;
     font-size: clamp(26px, 3vw, 36px);
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: -0.035em;
     line-height: 1.25;
 }
 
 @media (max-width: 700px) {
     #about-fish {
-        padding: 24px 0;
-        margin-bottom: 12px;
+        padding: 4px 8px 0;
+        box-sizing: border-box;
+        margin-bottom: 16px;
     }
 
     #about-fish .fish-intro-copy {
-        font-size: 16px;
+        font-size: 14px;
     }
 }
 
 #fishpage-con {
+    position: relative;
     width: 100%;
-    height: 65vh;
+    flex: 1 0 280px;
     min-height: 280px;
-    flex-shrink: 0;
     background-color: black;
-    /* border-radius: 15px 15px 0px 0px; */
     color: #ccc;
     box-sizing: border-box;
     overflow: hidden;
-    /* border: 1px solid rgb(144 238 144 / 20%); */
-    /* border: 2px dashed green; */
-    border: 2px solid lightblue;
-    /* border-bottom: 4px solid sandybrown; */
-    box-shadow: var(--canvas-shadow);
+    border: 3px solid #42616a;
+    border-radius: 12px;
+    box-shadow: 0 0 32px rgb(112 209 207 / 6%);
+}
+
+#fishpage-con::after {
+    content: "+ drop food here";
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #94a8ad;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 #ascii-fish {
@@ -72,23 +90,29 @@ body:has(#fishpage-con) {
     width: 100%;
     height: 100%;
     background-color: black;
+    cursor: crosshair;
 }
 
 
 #fish-desc-container {
     width: 100%;
+    flex-shrink: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-    gap: 16px;
-    margin-top: 20px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 16px;
     color: white;
 }
 
 .fish-desc {
     min-width: 0;
-    /* border: 2px solid white; */
     display: grid;
-    grid-template-columns: 120px minmax(0, 1fr);
+    grid-template-columns: 96px minmax(0, 1fr);
+    background: #0b1215;
+    border: 1px solid var(--fish-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 180ms ease, background-color 180ms ease;
 }
 
 .fish-pfp {
@@ -97,20 +121,20 @@ body:has(#fishpage-con) {
     align-items: center;
     margin: 0;
     padding: 12px 4px;
-    /* border-right: 1px dotted #777; */
-    background: #0b1116;
-    font: 9px/1.25 Consolas, "Courier New", monospace;
+    border-right: 1px solid var(--fish-border);
+    background: #0e1a1e;
+    font: 8px/1.25 Consolas, "Courier New", monospace;
 }
 
 .fish-desc-text {
     min-width: 0;
-    padding: 16px 12px;
+    padding: 14px 12px;
     display: flex;
     flex-direction: column;
 }
 
 .fish-desc-text h3 {
-    margin: 0 0 8px;
+    margin: 0 0 12px;
     font-size: 16px;
 }
 
@@ -124,25 +148,57 @@ body:has(#fishpage-con) {
 }
 
 .fish-hunger span {
-    color: #ccc;
+    color: var(--fish-accent);
 }
 
 .fish-hunger meter {
     width: 100%;
-    height: 14px;
-    border-radius: 0;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #24353c;
 }
 
 .fish-hunger meter::-webkit-meter-bar {
-    border-radius: 0;
+    border: 0;
+    background: #24353c;
+    border-radius: 4px;
 }
 
 .fish-hunger meter::-webkit-meter-optimum-value,
 .fish-hunger meter::-webkit-meter-suboptimum-value,
 .fish-hunger meter::-webkit-meter-even-less-good-value {
-    border-radius: 0;
+    background: var(--fish-accent);
+    border-radius: 4px;
 }
 
 .fish-hunger meter::-moz-meter-bar {
-    border-radius: 0;
+    background: var(--fish-accent);
+    border-radius: 4px;
+}
+
+@media (hover: hover) {
+    .fish-desc:hover {
+        border-color: #608b8e;
+        background: #101d21;
+    }
+}
+
+@media (max-width: 1200px) {
+    #fish-desc-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    #fish-desc-container {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 8px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fish-desc {
+        transition: none;
+    }
 }

@@ -10,37 +10,29 @@
         <link rel="stylesheet" href="styles/projectsPage.css">
         <link rel="stylesheet" href="styles/contactPage.css">
         <script src="https://kit.fontawesome.com/00285535b8.js" crossorigin="anonymous"></script>
-        <title>benjury.dev</title>
+        <title>{{TITLE}}</title>
 
 
-        <script src="scripts/home/canvas.js" defer></script>
-        <script src='scripts/home/aboutme.js' defer></script>
-        <script src="scripts/about/terminal.js" defer></script>
-        <script src="scripts/fish/aboutfish.js" defer></script>
-        <script src="scripts/fish/fishdesc.js" defer></script>
-        <script src="scripts/fish/fishpage.js" defer></script>
-        <script src="scripts/projects/projectspage.js" defer></script>
-        <script src="scripts/contact/contactpage.js" defer></script>
+        <!-- PAGE_SCRIPTS -->
         <script src="scripts/core/navigation.js" defer></script>
-        <script src="scripts/core/routing.js" defer></script>
+        <script src="scripts/core/page.js" defer></script>
     </head>
-    <body>
+    <body data-page="{{PAGE}}">
         <nav aria-label="Main navigation">
             <div id="nav-con">
-                <h1 data-route="home">benjury.dev <span class="nav-separator">| </span><span id="page-label">Welcome</span></h1>
+                <h1><a href="/">benjury.dev</a> <span class="nav-separator">| </span><span id="page-label">{{LABEL}}</span></h1>
                 <button id="nav-toggle" type="button" aria-expanded="false" aria-controls="i-con">
                     <span class="nav-toggle-icon" aria-hidden="true"></span>
                     Menu
                 </button>
                 <div id="i-con">
-                    <button id="projects" data-route="projects">Projects</button>
-                    <button id="nav-fish" data-route="fish">Fish</button>
-                    <button id="nav-contact" data-route="contact">Contact</button>
-                    <!-- <button id="message" data-route="message">Message</button> -->
+                    <a id="projects" class="nav-link" href="/projects">Projects</a>
+                    <a id="nav-fish" class="nav-link" href="/fish">Fish</a>
+                    <a id="nav-contact" class="nav-link" href="/contact">Contact</a>
                     <a id="github" href="https://github.com/Otamarau">GitHub</a>
                 </div>
             </div>
         </nav>
-        <div id="main-con"></div>
+        <main id="main-con"><!-- PAGE_CONTENT --></main>
     </body>
 </html>

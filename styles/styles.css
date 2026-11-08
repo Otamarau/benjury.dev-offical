@@ -26,6 +26,7 @@ body {
 }
 
 button,
+.nav-link,
 #github {
     background-color: transparent;
     color: white;
@@ -81,6 +82,7 @@ h2 {
     border-color: green;
 }
 
+.nav-link,
 #github {
     display: inline-flex;
     align-items: center;
@@ -107,6 +109,11 @@ h2 {
 
 #nav-con h1:hover {
     color: green;
+}
+
+#nav-con h1 a {
+    color: inherit;
+    text-decoration: none;
 }
 
 .ico {
@@ -170,6 +177,7 @@ nav {
 }
 
 nav button:focus-visible,
+nav a:focus-visible,
 #github:focus-visible {
     outline: 2px solid lightgreen;
     outline-offset: 4px;
@@ -386,6 +394,7 @@ body:has(#home-hero) {
     }
 
     #i-con button,
+    #i-con .nav-link,
     #i-con #github {
         width: 100%;
         min-height: 44px;

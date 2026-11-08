@@ -92,17 +92,6 @@ const fishFourCharacterColors = getPersistentCharacterColors(
     jellyfishCharacterColors
 );
 
-const renderFishPage = () => {
-    return `
-        ${aboutFish()}
-        <div id="fishpage-con">
-            <canvas id="ascii-fish" aria-label="Four ASCII sea creatures exploring the tank and eating food">
-                ASCII sea creatures
-            </canvas>
-        </div>
-        ${fishDesc()}
-    `;
-};
 
 
 const setupFishPage = () => {
@@ -178,6 +167,7 @@ const setupFishPage = () => {
         meter: document.getElementById(`${id}-hunger`),
         status: document.getElementById(`${id}-status`),
     }));
+    
     const updateHungerMeters = () => {
         const now = Date.now();
         hungerDisplays.forEach(({ id, meter, status }) => {

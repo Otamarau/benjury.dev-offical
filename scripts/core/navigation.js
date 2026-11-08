@@ -18,7 +18,7 @@
     });
 
     document.addEventListener("click", (event) => {
-        if (!nav.contains(event.target) || event.target.closest("[data-route]")) {
+        if (!nav.contains(event.target) || event.target.closest("a[href]")) {
             setOpen(false);
         }
     });
@@ -37,9 +37,8 @@
     mobile.addEventListener("change", () => {
         setOpen(false);
         if (!mobile.matches && document.activeElement === toggle) {
-            links.querySelector("button").focus();
+            links.querySelector("a").focus();
         }
     });
 
-    window.addEventListener("routechange", () => setOpen(false));
 })();
