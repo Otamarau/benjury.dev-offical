@@ -35,19 +35,17 @@ Navigation uses ordinary links and full page requests. A small browser compatibi
 
 The contact form still has no email backend. It displays a message directing visitors to email; it does not send or store submissions.
 
-## Docker on Unraid
+## Docker
 
-The deployment source lives at `/mnt/user/appdata/benjury-dev/source` on `unraid.nas`.
-Build and start it from the Unraid terminal:
+Build and start the container from the project directory:
 
 ```sh
-docker build -t benjury-dev:local /mnt/user/appdata/benjury-dev/source
+docker build -t benjury-dev:local .
 docker run -d --name benjury-dev --restart unless-stopped --init \
   -p 3001:3000 -e NODE_ENV=production -e PORT=3000 \
-  --label 'net.unraid.docker.webui=http://[IP]:[PORT:3000]' \
   benjury-dev:local
 ```
 
-Open `http://unraid.nas:3001`. The image runs as the unprivileged `node` user and includes a health check. No persistent volumes or `.env` file are required; use container environment variables. Router port forwarding and public access are not configured by this deployment.
+Open `http://localhost:3001` on the Docker host, or `http://<server-ip>:3001` from another device. The image runs as the unprivileged `node` user and includes a health check. No persistent volumes or `.env` file are required; use container environment variables. Configure HTTPS and public access separately for an internet-facing deployment.
 
-To update, copy the changed source to that directory, build again, stop and remove only the `benjury-dev` container, then rerun the command above. Other containers are unaffected. Keep the previous image if you need to roll back.
+To update, get the latest source, build again, stop and remove the `benjury-dev` container, then rerun the command above. Keep the previous image if you need to roll back.
