@@ -49,3 +49,15 @@ docker run -d --name benjury-dev --restart unless-stopped --init \
 Open `http://localhost:3001` on the Docker host, or `http://<server-ip>:3001` from another device. The image runs as the unprivileged `node` user and includes a health check. No persistent volumes or `.env` file are required; use container environment variables. Configure HTTPS and public access separately for an internet-facing deployment.
 
 To update, get the latest source, build again, stop and remove the `benjury-dev` container, then rerun the command above. Keep the previous image if you need to roll back.
+
+## GitHub builds and Unraid updates
+
+Pushes to `main` run the HTTP tests, build the Docker image, test that image, and publish it to `ghcr.io/otamarau/benjury-dev:main`. Pull requests run the tests without publishing. You can also run the workflow manually from GitHub Actions.
+
+The workflow uses GitHub's built-in token with package write permission; it does not need SSH credentials or access to your server. After the first successful build, set the container package visibility to **Public** in GitHub package settings so Unraid can pull it without credentials. Public repository visibility alone does not make the package public.
+
+`deploy/unraid.xml` provides the Unraid container template. Install it in Unraid's user-template directory and use it to create the container, or configure the same repository, ports, and variables in the Docker UI. An existing locally built container needs a one-time migration to the registry image and a saved template before native updates work.
+
+After a successful GitHub build, open **Docker → Check for Updates** in Unraid, then apply the update for **benjury-dev**. Unraid pulls the new image and recreates the container with its saved settings. The site briefly restarts. Enable scheduled Docker update checks and browser notifications in Unraid settings if you want update reminders; automatic deployment is not enabled by this workflow.
+
+Each build also publishes `ghcr.io/otamarau/benjury-dev:sha-<full-commit-sha>`. To roll back, change the repository tag in the Unraid container settings to a previous successful build's SHA tag and apply it. Restore `:main` when you want to follow new updates again.

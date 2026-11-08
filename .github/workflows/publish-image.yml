@@ -1,0 +1,69 @@
+name: Test and publish Docker image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+
+  publish:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Set image name
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "IMAGE=ghcr.io/${OWNER,,}/benjury-dev" >> "$GITHUB_ENV"
+      - name: Build image
+        env:
+          SOURCE: https://github.com/${{ github.repository }}
+        run: |
+          docker build --pull \
+            --label "org.opencontainers.image.source=$SOURCE" \
+            --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+            --tag "$IMAGE:main" --tag "$IMAGE:sha-$GITHUB_SHA" .
+      - name: Test the built image
+        run: docker run --rm --init -v "$GITHUB_WORKSPACE/test:/app/test:ro" "$IMAGE:main" node --test
+      - name: Publish image
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          docker push "$IMAGE:sha-$GITHUB_SHA"
+          docker push "$IMAGE:main"
+      - name: Sign out of registry
+        if: always()
+        run: docker logout ghcr.io
+      - name: Update instructions
+        run: |
+          echo '### Image ready for Unraid' >> "$GITHUB_STEP_SUMMARY"
+          echo "Published \`$IMAGE:main\` and \`$IMAGE:sha-$GITHUB_SHA\`." >> "$GITHUB_STEP_SUMMARY"
+          echo 'In Unraid, open Docker → Check for Updates → apply the update for benjury-dev.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'The running site is not updated automatically. For the first deployment, make the GitHub container package public to allow anonymous pulls.' >> "$GITHUB_STEP_SUMMARY"

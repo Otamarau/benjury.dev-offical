@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>benjury-dev</Name>
+  <Repository>ghcr.io/otamarau/benjury-dev:main</Repository>
+  <Registry>https://github.com/Otamarau/benjury.dev-offical/pkgs/container/benjury-dev</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Project>https://github.com/Otamarau/benjury.dev-offical</Project>
+  <Overview>Express portfolio website. Images are tested and published from main; apply updates through the Docker tab.</Overview>
+  <WebUI>http://[IP]:[PORT:3000]</WebUI>
+  <ExtraParams>--init --restart unless-stopped</ExtraParams>
+  <Config Name="Web port" Target="3000" Default="3001" Mode="tcp" Description="Website port" Type="Port" Display="always" Required="true" Mask="false">3001</Config>
+  <Config Name="Node environment" Target="NODE_ENV" Default="production" Mode="" Description="Runtime environment" Type="Variable" Display="always" Required="true" Mask="false">production</Config>
+  <Config Name="Express port" Target="PORT" Default="3000" Mode="" Description="Internal port; keep aligned with the container port" Type="Variable" Display="advanced" Required="true" Mask="false">3000</Config>
+</Container>
