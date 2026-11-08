@@ -32,6 +32,7 @@ let width = 0;
 let height = 0;
 let layoutWidth = 0;
 let layoutHeight = 0;
+let layoutTop = 0;
 let modelRadius = 0;
 let modelHeight = 0;
 let pixelRatio = 1;
@@ -179,6 +180,7 @@ const resizeCanvas = () => {
     height = bounds.height;
     layoutWidth = layoutBounds.width;
     layoutHeight = layoutBounds.height;
+    layoutTop = layoutBounds.top - bounds.top;
     canvas.width = Math.round(width * pixelRatio);
     canvas.height = Math.round(height * pixelRatio);
 };
@@ -243,7 +245,7 @@ const draw = (time) => {
     const cosZ = Math.cos(displayAngleZ);
     const sinZ = Math.sin(displayAngleZ);
     const centerX = width / 2;
-    const centerY = layoutHeight / 2;
+    const centerY = layoutTop + layoutHeight / 2;
     const introElapsed = reduceMotion ? introDuration : time - introStartTime;
     const introProgress = easeOutCubic(Math.min(Math.max(introElapsed / introDuration, 0), 1));
     const introComplete = introProgress === 1;
