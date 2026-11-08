@@ -10,7 +10,10 @@ before(async () => {
     await once(server, 'listening');
     base = `http://127.0.0.1:${server.address().port}`;
 });
-after(() => new Promise(resolve => server.close(resolve)));
+after(() => new Promise(resolve => {
+    server.close(resolve);
+    server.closeAllConnections();
+}));
 
 for (const [path, marker, script] of [
     ['/', 'home-hero', 'home/canvas.js'],
