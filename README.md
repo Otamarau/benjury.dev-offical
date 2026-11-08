@@ -60,4 +60,6 @@ The workflow uses GitHub's built-in token with package write permission; it does
 
 After a successful GitHub build, open **Docker → Check for Updates** in Unraid, then apply the update for **benjury-dev**. Unraid pulls the new image and recreates the container with its saved settings. The site briefly restarts. Enable scheduled Docker update checks and browser notifications in Unraid settings if you want update reminders; automatic deployment is not enabled by this workflow.
 
+For website-only reminders, `deploy/check-update.php` can be scheduled on Unraid. It uses Unraid's native update checker, posts a browser notification once per new image, and skips fixed rollback tags. It does not pull or deploy images, email anyone, or check other containers. It depends on Unraid's Docker manager PHP interfaces.
+
 Each build also publishes `ghcr.io/otamarau/benjury-dev:sha-<full-commit-sha>`. To roll back, change the repository tag in the Unraid container settings to a previous successful build's SHA tag and apply it. Restore `:main` when you want to follow new updates again.
